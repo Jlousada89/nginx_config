@@ -1,51 +1,34 @@
-/* GITHUB_REPOSITORY: <your-repository-url>
-GITHUB_BRANCH: main
-JENKINS_JOB_NAME: deploy_nginx
-
-on:
-  push:
-    branches:
-      - $GITHUB_BRANCH
-
-jobs:
-  my-jenkins-job:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - name: Build
-        run: echo "Building..."
-*/
-
 pipeline {
     agent any
 
     stages {
-        stage('Clone Git Repository') {
-                    git url: 'https://github.com/Jlousada89/nginx-config.git'
-        }
-
-        stage('Build Docker Image') {
+        stage('Fetch repository') {
             steps {
-                docker build -t nginx:latest .
+                git 'https://github.com/jlousada89/nginx-config.git'
             }
         }
 
-        stage('Deploy Docker Image') {
+        stage('Build and deploy container') {
             steps {
-                docker push nginx:latest
+                sh 'docker build -t nginx:latest .'
+                sh 'docker swarm init'
+                sh 'TOKEN_COMMAND=$(docker swarm join-token worker)'
+                sh 'TOKEN_COMMAND=$(echo ${TOKEN_COMMAND} | awk -F"command:" \'{print $2}\')'
+                sh '${TOKEN_COMMAND}'
+                sh 'docker service create -d --replicas 1 -p 80:80 nginx:latest'
             }
         }
 
-        stage('Copy Nginx Configuration File') {
-            docker cp 'workspace/nginx.conf' 'my-nginx-container:/etc/nginx/nginx.conf'
+        stage('Copy nginx.conf') {
+            steps {
+                sh 'scp nginx.conf <nginx-vm-user>@<nginx-vm-ip>:/etc/nginx/nginx.conf'
+            }
         }
 
-        stage('Update Nginx Configuration File') {
-            docker exec my-nginx-container nginx -s reload
-        }
-
-        stage('Restart Nginx Service') {
-            docker exec my-nginx-container nginx -s reload
+        stage('Restart httpd') {
+            steps {
+                sh 'ssh <nginx-vm-user>@<nginx-vm-ip> sudo systemctl restart nginx'
+            }
         }
     }
 }
