@@ -1,2 +1,2 @@
 # nginx_config
-configuration to a nginx  
+This is a repository to manage nginx configuration file   
