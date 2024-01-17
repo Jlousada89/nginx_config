@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Fetch repository') {
             steps {
-                git 'https://github.com/jlousada89/nginx-config.git'
+                git 'https://github.com/jlousada89/nginx-config'
             }
         }
 
